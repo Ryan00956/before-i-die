@@ -1,0 +1,61 @@
+package com.lastregrets.data.local
+
+import android.content.Context
+import androidx.room.Database
+import androidx.room.Room
+import androidx.room.RoomDatabase
+import androidx.sqlite.db.SupportSQLiteDatabase
+import com.lastregrets.data.model.Regret
+import com.lastregrets.data.model.TodoItem
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+
+@Database(
+    entities = [Regret::class, TodoItem::class],
+    version = 1,
+    exportSchema = false
+)
+abstract class AppDatabase : RoomDatabase() {
+
+    abstract fun regretDao(): RegretDao
+    abstract fun todoDao(): TodoDao
+
+    companion object {
+        @Volatile
+        private var INSTANCE: AppDatabase? = null
+
+        fun getDatabase(context: Context): AppDatabase {
+            return INSTANCE ?: synchronized(this) {
+                val instance = Room.databaseBuilder(
+                    context.applicationContext,
+                    AppDatabase::class.java,
+                    "last_regrets_database"
+                )
+                    .addCallback(SeedDatabaseCallback())
+                    .build()
+                INSTANCE = instance
+                instance
+            }
+        }
+    }
+
+    private class SeedDatabaseCallback : Callback() {
+        override fun onCreate(db: SupportSQLiteDatabase) {
+            super.onCreate(db)
+            INSTANCE?.let { database ->
+                CoroutineScope(Dispatchers.IO).launch {
+                    populateDatabase(database.regretDao())
+                }
+            }
+        }
+
+        suspend fun populateDatabase(regretDao: RegretDao) {
+            // 只在数据库为空时填充种子数据
+            if (regretDao.getCount() > 0) return
+
+            val seedRegrets = SeedData.getAllSeedRegrets()
+            regretDao.insertAll(seedRegrets)
+        }
+    }
+}
