@@ -56,13 +56,13 @@ class HomeViewModel(
         }
     }
 
-    fun resonateWithRegret(regretId: Long) {
+    fun resonateWithRegret() {
+        val regret = _uiState.value.dailyRegret ?: return
         viewModelScope.launch {
-            regretRepository.resonate(regretId)
-            // 重新加载以反映更新
-            val updated = regretRepository.getRegretById(regretId)
-            if (updated != null && _uiState.value.dailyRegret?.id == regretId) {
-                _uiState.update { it.copy(dailyRegret = updated) }
+            regretRepository.resonate(regret)
+            // 更新本地 UI 显示（乐观更新）
+            _uiState.update {
+                it.copy(dailyRegret = regret.copy(resonateCount = regret.resonateCount + 1))
             }
         }
     }

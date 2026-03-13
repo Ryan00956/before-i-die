@@ -16,7 +16,8 @@ data class Regret(
     val resonateCount: Int = 0,             // "我也是" 共鸣计数
     val createdAt: Long = System.currentTimeMillis(),
     val isSeedData: Boolean = false,        // 是否为种子数据
-    val isUserSubmitted: Boolean = false    // 是否为用户提交
+    val isUserSubmitted: Boolean = false,   // 是否为用户提交
+    val firestoreId: String? = null         // Firestore 文档 ID（用于云端同步）
 ) {
     fun getCategoryEnum(): RegretCategory = RegretCategory.fromName(category)
 }

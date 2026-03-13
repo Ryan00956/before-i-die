@@ -31,7 +31,7 @@ import com.lastregrets.ui.viewmodel.HomeUiState
 fun HomeScreen(
     uiState: HomeUiState,
     onRefresh: () -> Unit,
-    onResonate: (Long) -> Unit,
+    onResonate: () -> Unit,
     onAddToTodo: () -> Unit,
     onNavigateToSquare: () -> Unit,
     onNavigateToPublish: () -> Unit,
@@ -168,7 +168,7 @@ fun HomeScreen(
                             ) {
                                 // 共鸣按钮
                                 TextButton(
-                                    onClick = { onResonate(regret.id) },
+                                    onClick = onResonate,
                                     colors = ButtonDefaults.textButtonColors(
                                         contentColor = ResonateColor
                                     )

@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.lastregrets.data.model.Regret
 import com.lastregrets.data.model.TodoItem
@@ -13,7 +14,7 @@ import kotlinx.coroutines.launch
 
 @Database(
     entities = [Regret::class, TodoItem::class],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -25,6 +26,13 @@ abstract class AppDatabase : RoomDatabase() {
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
+        // v1 -> v2: 添加 firestoreId 字段
+        private val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE regrets ADD COLUMN firestoreId TEXT DEFAULT NULL")
+            }
+        }
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -32,6 +40,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "last_regrets_database"
                 )
+                    .addMigrations(MIGRATION_1_2)
                     .addCallback(SeedDatabaseCallback())
                     .build()
                 INSTANCE = instance

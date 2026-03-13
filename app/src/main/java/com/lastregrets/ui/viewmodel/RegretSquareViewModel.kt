@@ -54,9 +54,9 @@ class RegretSquareViewModel(
         }
     }
 
-    fun resonate(regretId: Long) {
+    fun resonate(regret: Regret) {
         viewModelScope.launch {
-            regretRepository.resonate(regretId)
+            regretRepository.resonate(regret)
         }
     }
 

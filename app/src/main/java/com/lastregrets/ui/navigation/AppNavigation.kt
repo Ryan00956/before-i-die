@@ -108,7 +108,7 @@ fun AppNavigation(
                 HomeScreen(
                     uiState = uiState,
                     onRefresh = viewModel::refreshDailyRegret,
-                    onResonate = viewModel::resonateWithRegret,
+                    onResonate = { viewModel.resonateWithRegret() },
                     onAddToTodo = {
                         uiState.dailyRegret?.let { viewModel.addToTodo(it) }
                     },
@@ -143,7 +143,7 @@ fun AppNavigation(
                 RegretSquareScreen(
                     uiState = uiState,
                     onSelectCategory = viewModel::selectCategory,
-                    onResonate = viewModel::resonate,
+                    onResonate = { regret -> viewModel.resonate(regret) },
                     onAddToTodo = viewModel::addToTodo,
                     onDismissToast = viewModel::dismissToast
                 )

@@ -31,7 +31,7 @@ import com.lastregrets.ui.viewmodel.RegretSquareUiState
 fun RegretSquareScreen(
     uiState: RegretSquareUiState,
     onSelectCategory: (RegretCategory?) -> Unit,
-    onResonate: (Long) -> Unit,
+    onResonate: (Regret) -> Unit,
     onAddToTodo: (Regret) -> Unit,
     onDismissToast: () -> Unit
 ) {
@@ -126,10 +126,13 @@ fun RegretSquareScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier.padding(bottom = 80.dp)
                 ) {
-                    items(uiState.regrets, key = { it.id }) { regret ->
+                    items(
+                        uiState.regrets,
+                        key = { it.firestoreId ?: it.id.toString() }
+                    ) { regret ->
                         RegretCard(
                             regret = regret,
-                            onResonate = { onResonate(regret.id) },
+                            onResonate = { onResonate(regret) },
                             onAddToTodo = { onAddToTodo(regret) }
                         )
                     }
