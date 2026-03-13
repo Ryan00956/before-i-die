@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "000000000000",
-    "project_id": "before-i-die-placeholder",
-    "storage_bucket": "before-i-die-placeholder.appspot.com"
+    "project_number": "199399940803",
+    "project_id": "before-i-die-777c4",
+    "storage_bucket": "before-i-die-777c4.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:000000000000:android:0000000000000000000000",
+        "mobilesdk_app_id": "1:199399940803:android:a96fb40c0ccda78848b876",
         "android_client_info": {
           "package_name": "com.lastregrets"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyPLACEHOLDER_REPLACE_WITH_REAL_KEY"
+          "current_key": "AIzaSyD5dNUyZz1dqoFbBsx3RQWT9utRlvYSWdk"
         }
       ],
       "services": {

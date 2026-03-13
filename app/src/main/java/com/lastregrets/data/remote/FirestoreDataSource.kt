@@ -1,5 +1,6 @@
 package com.lastregrets.data.remote
 
+import android.util.Log
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.lastregrets.data.model.Regret
@@ -8,6 +9,7 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withTimeout
 
 /**
  * Firestore 远程数据源
@@ -18,6 +20,8 @@ class FirestoreDataSource(
 ) {
     companion object {
         const val COLLECTION_REGRETS = "regrets"
+        private const val TIMEOUT_MS = 10_000L // 10秒超时
+        private const val TAG = "FirestoreDataSource"
     }
 
     /**
@@ -121,13 +125,16 @@ class FirestoreDataSource(
      */
     suspend fun getRandomRegret(): Regret? {
         return try {
-            val snapshot = firestore.collection(COLLECTION_REGRETS)
-                .get()
-                .await()
-            if (snapshot.isEmpty) return null
-            val randomDoc = snapshot.documents.random()
-            randomDoc.toRegret()
+            withTimeout(TIMEOUT_MS) {
+                val snapshot = firestore.collection(COLLECTION_REGRETS)
+                    .get()
+                    .await()
+                if (snapshot.isEmpty) return@withTimeout null
+                val randomDoc = snapshot.documents.random()
+                randomDoc.toRegret()
+            }
         } catch (e: Exception) {
+            Log.w(TAG, "获取随机遗憾超时或失败", e)
             null
         }
     }
@@ -137,20 +144,23 @@ class FirestoreDataSource(
      */
     suspend fun submitRegret(content: String, category: RegretCategory): String? {
         return try {
-            val data = hashMapOf(
-                "content" to content,
-                "category" to category.name,
-                "source" to "anonymous",
-                "resonateCount" to 0,
-                "createdAt" to System.currentTimeMillis(),
-                "isSeedData" to false,
-                "isUserSubmitted" to true
-            )
-            val docRef = firestore.collection(COLLECTION_REGRETS)
-                .add(data)
-                .await()
-            docRef.id
+            withTimeout(TIMEOUT_MS) {
+                val data = hashMapOf(
+                    "content" to content,
+                    "category" to category.name,
+                    "source" to "anonymous",
+                    "resonateCount" to 0,
+                    "createdAt" to System.currentTimeMillis(),
+                    "isSeedData" to false,
+                    "isUserSubmitted" to true
+                )
+                val docRef = firestore.collection(COLLECTION_REGRETS)
+                    .add(data)
+                    .await()
+                docRef.id
+            }
         } catch (e: Exception) {
+            Log.w(TAG, "提交遗憾超时或失败", e)
             null
         }
     }
@@ -161,12 +171,15 @@ class FirestoreDataSource(
      */
     suspend fun resonate(firestoreId: String): Boolean {
         return try {
-            firestore.collection(COLLECTION_REGRETS)
-                .document(firestoreId)
-                .update("resonateCount", com.google.firebase.firestore.FieldValue.increment(1))
-                .await()
-            true
+            withTimeout(TIMEOUT_MS) {
+                firestore.collection(COLLECTION_REGRETS)
+                    .document(firestoreId)
+                    .update("resonateCount", com.google.firebase.firestore.FieldValue.increment(1))
+                    .await()
+                true
+            }
         } catch (e: Exception) {
+            Log.w(TAG, "共鸣操作超时或失败", e)
             false
         }
     }
@@ -176,23 +189,26 @@ class FirestoreDataSource(
      */
     suspend fun uploadSeedData(regrets: List<Regret>): Boolean {
         return try {
-            val batch = firestore.batch()
-            regrets.forEach { regret ->
-                val docRef = firestore.collection(COLLECTION_REGRETS).document()
-                val data = hashMapOf(
-                    "content" to regret.content,
-                    "category" to regret.category,
-                    "source" to regret.source,
-                    "resonateCount" to regret.resonateCount,
-                    "createdAt" to regret.createdAt,
-                    "isSeedData" to true,
-                    "isUserSubmitted" to false
-                )
-                batch.set(docRef, data)
+            withTimeout(30_000L) { // 批量上传给更长的超时时间
+                val batch = firestore.batch()
+                regrets.forEach { regret ->
+                    val docRef = firestore.collection(COLLECTION_REGRETS).document()
+                    val data = hashMapOf(
+                        "content" to regret.content,
+                        "category" to regret.category,
+                        "source" to regret.source,
+                        "resonateCount" to regret.resonateCount,
+                        "createdAt" to regret.createdAt,
+                        "isSeedData" to true,
+                        "isUserSubmitted" to false
+                    )
+                    batch.set(docRef, data)
+                }
+                batch.commit().await()
+                true
             }
-            batch.commit().await()
-            true
         } catch (e: Exception) {
+            Log.w(TAG, "上传种子数据超时或失败", e)
             false
         }
     }
@@ -202,12 +218,15 @@ class FirestoreDataSource(
      */
     suspend fun hasData(): Boolean {
         return try {
-            val snapshot = firestore.collection(COLLECTION_REGRETS)
-                .limit(1)
-                .get()
-                .await()
-            !snapshot.isEmpty
+            withTimeout(TIMEOUT_MS) {
+                val snapshot = firestore.collection(COLLECTION_REGRETS)
+                    .limit(1)
+                    .get()
+                    .await()
+                !snapshot.isEmpty
+            }
         } catch (e: Exception) {
+            Log.w(TAG, "检查数据超时或失败", e)
             false
         }
     }
