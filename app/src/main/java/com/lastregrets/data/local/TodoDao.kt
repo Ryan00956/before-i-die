@@ -25,6 +25,9 @@ interface TodoDao {
     @Query("SELECT EXISTS(SELECT 1 FROM todo_items WHERE regretId = :regretId)")
     suspend fun isTodoExists(regretId: Long): Boolean
 
+    @Query("SELECT EXISTS(SELECT 1 FROM todo_items WHERE regretFirestoreId = :firestoreId)")
+    suspend fun isTodoExistsByFirestoreId(firestoreId: String): Boolean
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTodo(todoItem: TodoItem): Long
 

@@ -169,18 +169,22 @@ fun HomeScreen(
                                 // 共鸣按钮
                                 TextButton(
                                     onClick = onResonate,
+                                    enabled = !uiState.hasResonated,
                                     colors = ButtonDefaults.textButtonColors(
-                                        contentColor = ResonateColor
+                                        contentColor = TextSecondary,
+                                        disabledContentColor = ResonateColor
                                     )
                                 ) {
                                     Icon(
-                                        Icons.Default.Favorite,
+                                        if (uiState.hasResonated) Icons.Default.Favorite
+                                        else Icons.Default.FavoriteBorder,
                                         contentDescription = "共鸣",
                                         modifier = Modifier.size(18.dp)
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Text(
-                                        text = "我也是 ${formatResonateCount(regret.resonateCount)}",
+                                        text = if (uiState.hasResonated) "已共鸣 ${formatResonateCount(regret.resonateCount)}"
+                                               else "我也是 ${formatResonateCount(regret.resonateCount)}",
                                         style = MaterialTheme.typography.labelLarge
                                     )
                                 }

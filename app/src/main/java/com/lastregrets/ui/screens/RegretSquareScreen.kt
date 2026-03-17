@@ -130,8 +130,10 @@ fun RegretSquareScreen(
                         uiState.regrets,
                         key = { it.firestoreId ?: it.id.toString() }
                     ) { regret ->
+                        val identifier = regret.firestoreId ?: regret.id.toString()
                         RegretCard(
                             regret = regret,
+                            isResonated = identifier in uiState.resonatedIds,
                             onResonate = { onResonate(regret) },
                             onAddToTodo = { onAddToTodo(regret) }
                         )
@@ -164,6 +166,7 @@ fun RegretSquareScreen(
 @Composable
 private fun RegretCard(
     regret: Regret,
+    isResonated: Boolean,
     onResonate: () -> Unit,
     onAddToTodo: () -> Unit
 ) {
@@ -217,17 +220,23 @@ private fun RegretCard(
             ) {
                 TextButton(
                     onClick = onResonate,
-                    colors = ButtonDefaults.textButtonColors(contentColor = ResonateColor),
+                    enabled = !isResonated,
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = TextSecondary,
+                        disabledContentColor = ResonateColor
+                    ),
                     contentPadding = PaddingValues(horizontal = 8.dp)
                 ) {
                     Icon(
-                        Icons.Default.Favorite,
+                        if (isResonated) Icons.Default.Favorite
+                        else Icons.Default.FavoriteBorder,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = "我也是 ${formatResonateCount(regret.resonateCount)}",
+                        text = if (isResonated) "已共鸣 ${formatResonateCount(regret.resonateCount)}"
+                               else "我也是 ${formatResonateCount(regret.resonateCount)}",
                         style = MaterialTheme.typography.labelSmall
                     )
                 }

@@ -13,7 +13,8 @@ data class HomeUiState(
     val dailyRegret: Regret? = null,
     val isLoading: Boolean = true,
     val totalRegrets: Int = 0,
-    val showAddedToast: Boolean = false
+    val showAddedToast: Boolean = false,
+    val hasResonated: Boolean = false
 )
 
 class HomeViewModel(
@@ -33,7 +34,7 @@ class HomeViewModel(
         viewModelScope.launch {
             val regret = regretRepository.getRandomRegret()
             _uiState.update {
-                it.copy(dailyRegret = regret, isLoading = false)
+                it.copy(dailyRegret = regret, isLoading = false, hasResonated = false)
             }
         }
     }
@@ -51,18 +52,24 @@ class HomeViewModel(
             _uiState.update { it.copy(isLoading = true) }
             val regret = regretRepository.getRandomRegret()
             _uiState.update {
-                it.copy(dailyRegret = regret, isLoading = false)
+                it.copy(dailyRegret = regret, isLoading = false, hasResonated = false)
             }
         }
     }
 
     fun resonateWithRegret() {
         val regret = _uiState.value.dailyRegret ?: return
+        // 防止重复共鸣
+        if (_uiState.value.hasResonated) return
+
         viewModelScope.launch {
             regretRepository.resonate(regret)
-            // 更新本地 UI 显示（乐观更新）
+            // 更新本地 UI 显示（乐观更新）+ 标记已共鸣
             _uiState.update {
-                it.copy(dailyRegret = regret.copy(resonateCount = regret.resonateCount + 1))
+                it.copy(
+                    dailyRegret = regret.copy(resonateCount = regret.resonateCount + 1),
+                    hasResonated = true
+                )
             }
         }
     }

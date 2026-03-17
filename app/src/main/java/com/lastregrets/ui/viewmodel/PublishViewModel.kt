@@ -24,7 +24,9 @@ class PublishViewModel(
     val uiState: StateFlow<PublishUiState> = _uiState.asStateFlow()
 
     fun updateContent(content: String) {
-        _uiState.update { it.copy(content = content, errorMessage = null) }
+        if (content.length <= 200) {
+            _uiState.update { it.copy(content = content, errorMessage = null) }
+        }
     }
 
     fun selectCategory(category: RegretCategory) {

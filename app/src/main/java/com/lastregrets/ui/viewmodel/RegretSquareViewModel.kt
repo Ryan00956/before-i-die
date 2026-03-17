@@ -7,6 +7,7 @@ import com.lastregrets.data.model.Regret
 import com.lastregrets.data.model.RegretCategory
 import com.lastregrets.data.repository.RegretRepository
 import com.lastregrets.data.repository.TodoRepository
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -14,7 +15,8 @@ data class RegretSquareUiState(
     val regrets: List<Regret> = emptyList(),
     val selectedCategory: RegretCategory? = null,
     val isLoading: Boolean = true,
-    val toastMessage: String? = null
+    val toastMessage: String? = null,
+    val resonatedIds: Set<String> = emptySet()
 )
 
 class RegretSquareViewModel(
@@ -25,38 +27,41 @@ class RegretSquareViewModel(
     private val _uiState = MutableStateFlow(RegretSquareUiState())
     val uiState: StateFlow<RegretSquareUiState> = _uiState.asStateFlow()
 
+    private var categoryJob: Job? = null
+
     init {
-        loadAllRegrets()
+        loadRegrets(null)
     }
 
-    private fun loadAllRegrets() {
-        viewModelScope.launch {
-            regretRepository.getAllRegrets().collect { regrets ->
-                _uiState.update {
-                    it.copy(regrets = regrets, isLoading = false)
-                }
+    private fun loadRegrets(category: RegretCategory?) {
+        categoryJob?.cancel()
+        categoryJob = viewModelScope.launch {
+            val flow = if (category == null) {
+                regretRepository.getAllRegrets()
+            } else {
+                regretRepository.getRegretsByCategory(category)
+            }
+            flow.collect { regrets ->
+                _uiState.update { it.copy(regrets = regrets, isLoading = false) }
             }
         }
     }
 
     fun selectCategory(category: RegretCategory?) {
         _uiState.update { it.copy(selectedCategory = category, isLoading = true) }
-        viewModelScope.launch {
-            if (category == null) {
-                regretRepository.getAllRegrets().collect { regrets ->
-                    _uiState.update { it.copy(regrets = regrets, isLoading = false) }
-                }
-            } else {
-                regretRepository.getRegretsByCategory(category).collect { regrets ->
-                    _uiState.update { it.copy(regrets = regrets, isLoading = false) }
-                }
-            }
-        }
+        loadRegrets(category)
     }
 
     fun resonate(regret: Regret) {
+        val identifier = regret.firestoreId ?: regret.id.toString()
+        // 防止重复共鸣
+        if (identifier in _uiState.value.resonatedIds) return
+
         viewModelScope.launch {
             regretRepository.resonate(regret)
+            _uiState.update {
+                it.copy(resonatedIds = it.resonatedIds + identifier)
+            }
         }
     }
 
