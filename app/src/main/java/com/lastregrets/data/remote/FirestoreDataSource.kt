@@ -189,10 +189,12 @@ class FirestoreDataSource(
      */
     suspend fun uploadSeedData(regrets: List<Regret>): Boolean {
         return try {
-            withTimeout(30_000L) { // 批量上传给更长的超时时间
+            withTimeout(30_000L) {
                 val batch = firestore.batch()
                 regrets.forEach { regret ->
-                    val docRef = firestore.collection(COLLECTION_REGRETS).document()
+                    // 使用确定性 ID（内容哈希），重复上传会覆盖而不会重复
+                    val docId = "seed_" + regret.content.hashCode().toUInt().toString(16)
+                    val docRef = firestore.collection(COLLECTION_REGRETS).document(docId)
                     val data = hashMapOf(
                         "content" to regret.content,
                         "category" to regret.category,
@@ -226,8 +228,8 @@ class FirestoreDataSource(
                 !snapshot.isEmpty
             }
         } catch (e: Exception) {
-            Log.w(TAG, "检查数据超时或失败", e)
-            false
+            Log.w(TAG, "检查数据超时或失败，假定已有数据以避免重复上传", e)
+            true  // 失败时保守处理：假设已有数据，避免重复上传种子数据
         }
     }
 }

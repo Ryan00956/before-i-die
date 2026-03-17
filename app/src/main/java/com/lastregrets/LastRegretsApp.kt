@@ -3,6 +3,7 @@ package com.lastregrets
 import android.app.Application
 import android.util.Log
 import com.lastregrets.data.local.AppDatabase
+import com.lastregrets.data.local.ResonateStore
 import com.lastregrets.data.local.SeedData
 import com.lastregrets.data.remote.FirestoreDataSource
 import com.lastregrets.data.repository.RegretRepository
@@ -20,6 +21,7 @@ class LastRegretsApp : Application() {
     val firestoreDataSource by lazy { FirestoreDataSource() }
     val regretRepository by lazy { RegretRepository(database.regretDao(), firestoreDataSource) }
     val todoRepository by lazy { TodoRepository(database.todoDao()) }
+    val resonateStore by lazy { ResonateStore(this) }
 
     override fun onCreate() {
         super.onCreate()

@@ -18,7 +18,8 @@ class MainActivity : ComponentActivity() {
             LastRegretsTheme {
                 AppNavigation(
                     regretRepository = app.regretRepository,
-                    todoRepository = app.todoRepository
+                    todoRepository = app.todoRepository,
+                    resonateStore = app.resonateStore
                 )
             }
         }

@@ -11,15 +11,19 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lastregrets.data.model.Regret
 import com.lastregrets.data.model.RegretCategory
+import com.lastregrets.ui.components.ShimmerRegretCard
 import com.lastregrets.ui.components.formatResonateCount
 import com.lastregrets.ui.components.getColor
 import com.lastregrets.ui.components.getSourceLabel
@@ -33,7 +37,8 @@ fun RegretSquareScreen(
     onSelectCategory: (RegretCategory?) -> Unit,
     onResonate: (Regret) -> Unit,
     onAddToTodo: (Regret) -> Unit,
-    onDismissToast: () -> Unit
+    onDismissToast: () -> Unit,
+    onRefresh: () -> Unit
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -66,7 +71,6 @@ fun RegretSquareScreen(
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // "全部"标签
                 FilterChip(
                     selected = uiState.selectedCategory == null,
                     onClick = { onSelectCategory(null) },
@@ -78,7 +82,6 @@ fun RegretSquareScreen(
                         labelColor = TextSecondary
                     )
                 )
-
                 RegretCategory.entries.forEach { category ->
                     FilterChip(
                         selected = uiState.selectedCategory == category,
@@ -94,49 +97,57 @@ fun RegretSquareScreen(
                 }
             }
 
-            // 遗憾列表
-            if (uiState.isLoading) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(color = WarmAmber)
-                }
-            } else if (uiState.regrets.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(text = "📭", fontSize = 48.sp)
-                        Text(
-                            text = "这个分类暂时没有遗憾",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = TextHint,
-                            modifier = Modifier.padding(top = 8.dp)
-                        )
+            // 内容区域 + 下拉刷新
+            PullToRefreshBox(
+                isRefreshing = uiState.isRefreshing,
+                onRefresh = onRefresh,
+                modifier = Modifier.fillMaxSize()
+            ) {
+                when {
+                    uiState.isLoading && !uiState.isRefreshing -> {
+                        // 初始加载：骨架屏
+                        Column(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            repeat(5) { ShimmerRegretCard() }
+                        }
                     }
-                }
-            } else {
-                LazyColumn(
-                    contentPadding = PaddingValues(
-                        horizontal = 16.dp,
-                        vertical = 8.dp
-                    ),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.padding(bottom = 80.dp)
-                ) {
-                    items(
-                        uiState.regrets,
-                        key = { it.firestoreId ?: it.id.toString() }
-                    ) { regret ->
-                        val identifier = regret.firestoreId ?: regret.id.toString()
-                        RegretCard(
-                            regret = regret,
-                            isResonated = identifier in uiState.resonatedIds,
-                            onResonate = { onResonate(regret) },
-                            onAddToTodo = { onAddToTodo(regret) }
-                        )
+                    uiState.regrets.isEmpty() -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(text = "📭", fontSize = 48.sp)
+                                Text(
+                                    text = "这个分类暂时没有遗憾",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = TextHint,
+                                    modifier = Modifier.padding(top = 8.dp)
+                                )
+                            }
+                        }
+                    }
+                    else -> {
+                        LazyColumn(
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.padding(bottom = 80.dp)
+                        ) {
+                            items(
+                                uiState.regrets,
+                                key = { it.firestoreId ?: it.id.toString() }
+                            ) { regret ->
+                                val identifier = regret.firestoreId ?: regret.id.toString()
+                                RegretCard(
+                                    regret = regret,
+                                    isResonated = identifier in uiState.resonatedIds,
+                                    onResonate = { onResonate(regret) },
+                                    onAddToTodo = { onAddToTodo(regret) }
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -171,6 +182,7 @@ private fun RegretCard(
     onAddToTodo: () -> Unit
 ) {
     val category = RegretCategory.fromName(regret.category)
+    val hapticFeedback = LocalHapticFeedback.current
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -219,7 +231,10 @@ private fun RegretCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 TextButton(
-                    onClick = onResonate,
+                    onClick = {
+                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onResonate()
+                    },
                     enabled = !isResonated,
                     colors = ButtonDefaults.textButtonColors(
                         contentColor = TextSecondary,

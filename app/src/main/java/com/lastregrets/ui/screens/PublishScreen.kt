@@ -67,14 +67,18 @@ fun PublishScreen(
                     Text(text = "🙏", fontSize = 64.sp)
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = "感谢你的分享",
+                        text = if (uiState.isCloudSynced) "感谢你的分享"
+                               else "已保存到本地",
                         style = MaterialTheme.typography.headlineMedium,
                         color = WarmAmber,
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "你的遗憾也许会帮助某个人\n在还来得及的时候做出改变",
+                        text = if (uiState.isCloudSynced)
+                                   "你的遗憾也许会帮助某个人\n在还来得及的时候做出改变"
+                               else
+                                   "当前网络不可用，遗憾已保存到本地\n网络恢复后可在广场看到",
                         style = MaterialTheme.typography.bodyMedium,
                         color = TextSecondary,
                         textAlign = TextAlign.Center,

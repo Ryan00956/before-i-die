@@ -29,6 +29,34 @@ fun TodoScreen(
     onDelete: (Long) -> Unit,
     onToggleShowCompleted: () -> Unit
 ) {
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var todoIdToDelete by remember { mutableStateOf<Long?>(null) }
+
+    // 删除确认弹窗
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            containerColor = DarkBlue,
+            titleContentColor = WarmAmber,
+            textContentColor = TextPrimary,
+            title = { Text("确认删除") },
+            text = { Text("确定要从清单中移除这条待办吗？") },
+            confirmButton = {
+                TextButton(onClick = {
+                    todoIdToDelete?.let { onDelete(it) }
+                    showDeleteDialog = false
+                }) {
+                    Text("删除", color = ErrorRed)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("取消", color = TextSecondary)
+                }
+            }
+        )
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -151,7 +179,10 @@ fun TodoScreen(
                         TodoItemCard(
                             todo = todo,
                             onToggle = { onToggleComplete(todo) },
-                            onDelete = { onDelete(todo.id) }
+                            onDelete = {
+                                todoIdToDelete = todo.id
+                                showDeleteDialog = true
+                            }
                         )
                     }
                 }
@@ -185,7 +216,10 @@ fun TodoScreen(
                             TodoItemCard(
                                 todo = todo,
                                 onToggle = { onToggleComplete(todo) },
-                                onDelete = { onDelete(todo.id) }
+                                onDelete = {
+                                todoIdToDelete = todo.id
+                                showDeleteDialog = true
+                            }
                             )
                         }
                     }

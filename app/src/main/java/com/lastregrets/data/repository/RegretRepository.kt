@@ -11,6 +11,8 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 
+data class SubmitResult(val localId: Long, val cloudSuccess: Boolean)
+
 /**
  * 遗憾数据仓库
  *
@@ -109,7 +111,7 @@ class RegretRepository(
      * 提交新遗憾 - 双写：Firestore + 本地 Room
      * 发布到 Firestore 后，所有用户都能在广场看到
      */
-    suspend fun submitRegret(content: String, category: RegretCategory): Long {
+    suspend fun submitRegret(content: String, category: RegretCategory): SubmitResult {
         // 1. 先写入 Firestore（让全球用户可见）
         val firestoreId = firestoreDataSource.submitRegret(content, category)
 
@@ -130,7 +132,7 @@ class RegretRepository(
             Log.d(TAG, "遗憾已发布到云端: $firestoreId")
         }
 
-        return localId
+        return SubmitResult(localId = localId, cloudSuccess = firestoreId != null)
     }
 
     /**

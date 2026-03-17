@@ -1,6 +1,7 @@
 package com.lastregrets.ui.screens
 
 import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -14,13 +15,15 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lastregrets.data.model.RegretCategory
+import com.lastregrets.ui.components.ShimmerDailyCard
 import com.lastregrets.ui.components.formatResonateCount
 import com.lastregrets.ui.components.getColor
 import com.lastregrets.ui.components.getSourceLabel
@@ -38,6 +41,7 @@ fun HomeScreen(
     onDismissToast: () -> Unit
 ) {
     val scrollState = rememberScrollState()
+    val hapticFeedback = LocalHapticFeedback.current
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -108,107 +112,113 @@ fun HomeScreen(
                 modifier = Modifier.padding(bottom = 12.dp)
             )
 
-            if (uiState.isLoading) {
-                CircularProgressIndicator(
-                    color = WarmAmber,
-                    modifier = Modifier.padding(32.dp)
-                )
-            } else {
-                uiState.dailyRegret?.let { regret ->
-                    val category = RegretCategory.fromName(regret.category)
+            Crossfade(
+                targetState = uiState.isLoading,
+                animationSpec = tween(500),
+                label = "loadingTransition"
+            ) { isLoading ->
+                if (isLoading) {
+                    ShimmerDailyCard()
+                } else {
+                    uiState.dailyRegret?.let { regret ->
+                        val category = RegretCategory.fromName(regret.category)
 
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(20.dp),
-                        colors = CardDefaults.cardColors(containerColor = DarkBlue),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(24.dp)
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(20.dp),
+                            colors = CardDefaults.cardColors(containerColor = DarkBlue),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
                         ) {
-                            // 分类标签
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(bottom = 16.dp)
+                            Column(
+                                modifier = Modifier.padding(24.dp)
                             ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(8.dp)
-                                        .clip(CircleShape)
-                                        .background(category.getColor())
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = "${category.emoji} ${category.displayName}",
-                                    style = MaterialTheme.typography.labelLarge,
-                                    color = category.getColor()
-                                )
-                                Spacer(modifier = Modifier.weight(1f))
-                                Text(
-                                    text = getSourceLabel(regret.source),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = TextHint
-                                )
-                            }
-
-                            // 遗憾内容
-                            Text(
-                                text = "「 ${regret.content} 」",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = CandleGlow,
-                                lineHeight = 28.sp,
-                                modifier = Modifier.padding(bottom = 20.dp)
-                            )
-
-                            // 操作按钮行
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                // 共鸣按钮
-                                TextButton(
-                                    onClick = onResonate,
-                                    enabled = !uiState.hasResonated,
-                                    colors = ButtonDefaults.textButtonColors(
-                                        contentColor = TextSecondary,
-                                        disabledContentColor = ResonateColor
-                                    )
+                                // 分类标签
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(bottom = 16.dp)
                                 ) {
-                                    Icon(
-                                        if (uiState.hasResonated) Icons.Default.Favorite
-                                        else Icons.Default.FavoriteBorder,
-                                        contentDescription = "共鸣",
-                                        modifier = Modifier.size(18.dp)
+                                    Box(
+                                        modifier = Modifier
+                                            .size(8.dp)
+                                            .clip(CircleShape)
+                                            .background(category.getColor())
                                     )
-                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
                                     Text(
-                                        text = if (uiState.hasResonated) "已共鸣 ${formatResonateCount(regret.resonateCount)}"
-                                               else "我也是 ${formatResonateCount(regret.resonateCount)}",
-                                        style = MaterialTheme.typography.labelLarge
+                                        text = "${category.emoji} ${category.displayName}",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        color = category.getColor()
+                                    )
+                                    Spacer(modifier = Modifier.weight(1f))
+                                    Text(
+                                        text = getSourceLabel(regret.source),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = TextHint
                                     )
                                 }
 
-                                // 加入待办
-                                Button(
-                                    onClick = onAddToTodo,
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = WarmAmber,
-                                        contentColor = DeepNavy
-                                    ),
-                                    shape = RoundedCornerShape(12.dp)
+                                // 遗憾内容
+                                Text(
+                                    text = "「 ${regret.content} 」",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = CandleGlow,
+                                    lineHeight = 28.sp,
+                                    modifier = Modifier.padding(bottom = 20.dp)
+                                )
+
+                                // 操作按钮行
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Icon(
-                                        Icons.Default.Add,
-                                        contentDescription = "加入待办",
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(
-                                        text = "我现在能做",
-                                        style = MaterialTheme.typography.labelLarge,
-                                        fontWeight = FontWeight.Bold
-                                    )
+                                    // 共鸣按钮
+                                    TextButton(
+                                        onClick = {
+                                            hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            onResonate()
+                                        },
+                                        enabled = !uiState.hasResonated,
+                                        colors = ButtonDefaults.textButtonColors(
+                                            contentColor = TextSecondary,
+                                            disabledContentColor = ResonateColor
+                                        )
+                                    ) {
+                                        Icon(
+                                            if (uiState.hasResonated) Icons.Default.Favorite
+                                            else Icons.Default.FavoriteBorder,
+                                            contentDescription = "共鸣",
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(
+                                            text = if (uiState.hasResonated) "已共鸣 ${formatResonateCount(regret.resonateCount)}"
+                                                   else "我也是 ${formatResonateCount(regret.resonateCount)}",
+                                            style = MaterialTheme.typography.labelLarge
+                                        )
+                                    }
+
+                                    // 加入待办
+                                    Button(
+                                        onClick = onAddToTodo,
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = WarmAmber,
+                                            contentColor = DeepNavy
+                                        ),
+                                        shape = RoundedCornerShape(12.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Add,
+                                            contentDescription = "加入待办",
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(
+                                            text = "我现在能做",
+                                            style = MaterialTheme.typography.labelLarge,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
                                 }
                             }
                         }

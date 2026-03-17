@@ -3,6 +3,7 @@ package com.lastregrets.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.lastregrets.data.local.ContentFilter
 import com.lastregrets.data.model.RegretCategory
 import com.lastregrets.data.repository.RegretRepository
 import kotlinx.coroutines.flow.*
@@ -13,6 +14,7 @@ data class PublishUiState(
     val selectedCategory: RegretCategory = RegretCategory.OTHER,
     val isSubmitting: Boolean = false,
     val isSubmitted: Boolean = false,
+    val isCloudSynced: Boolean = false,
     val errorMessage: String? = null
 )
 
@@ -43,13 +45,23 @@ class PublishViewModel(
             _uiState.update { it.copy(errorMessage = "内容太短了，多写几个字吧") }
             return
         }
+        // 内容审核
+        val filterError = ContentFilter.check(state.content)
+        if (filterError != null) {
+            _uiState.update { it.copy(errorMessage = filterError) }
+            return
+        }
 
         viewModelScope.launch {
             _uiState.update { it.copy(isSubmitting = true) }
             try {
-                regretRepository.submitRegret(state.content, state.selectedCategory)
+                val result = regretRepository.submitRegret(state.content, state.selectedCategory)
                 _uiState.update {
-                    it.copy(isSubmitting = false, isSubmitted = true)
+                    it.copy(
+                        isSubmitting = false,
+                        isSubmitted = true,
+                        isCloudSynced = result.cloudSuccess
+                    )
                 }
             } catch (e: Exception) {
                 _uiState.update {

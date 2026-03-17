@@ -3,6 +3,7 @@ package com.lastregrets.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.lastregrets.data.local.ResonateStore
 import com.lastregrets.data.model.Regret
 import com.lastregrets.data.repository.RegretRepository
 import com.lastregrets.data.repository.TodoRepository
@@ -19,7 +20,8 @@ data class HomeUiState(
 
 class HomeViewModel(
     private val regretRepository: RegretRepository,
-    private val todoRepository: TodoRepository
+    private val todoRepository: TodoRepository,
+    private val resonateStore: ResonateStore
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -33,8 +35,10 @@ class HomeViewModel(
     private fun loadDailyRegret() {
         viewModelScope.launch {
             val regret = regretRepository.getRandomRegret()
+            val identifier = regret?.firestoreId ?: regret?.id?.toString()
+            val isResonated = if (identifier != null) resonateStore.isResonated(identifier) else false
             _uiState.update {
-                it.copy(dailyRegret = regret, isLoading = false, hasResonated = false)
+                it.copy(dailyRegret = regret, isLoading = false, hasResonated = isResonated)
             }
         }
     }
@@ -51,20 +55,22 @@ class HomeViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             val regret = regretRepository.getRandomRegret()
+            val identifier = regret?.firestoreId ?: regret?.id?.toString()
+            val isResonated = if (identifier != null) resonateStore.isResonated(identifier) else false
             _uiState.update {
-                it.copy(dailyRegret = regret, isLoading = false, hasResonated = false)
+                it.copy(dailyRegret = regret, isLoading = false, hasResonated = isResonated)
             }
         }
     }
 
     fun resonateWithRegret() {
         val regret = _uiState.value.dailyRegret ?: return
-        // 防止重复共鸣
         if (_uiState.value.hasResonated) return
 
         viewModelScope.launch {
             regretRepository.resonate(regret)
-            // 更新本地 UI 显示（乐观更新）+ 标记已共鸣
+            val identifier = regret.firestoreId ?: regret.id.toString()
+            resonateStore.addResonatedId(identifier)
             _uiState.update {
                 it.copy(
                     dailyRegret = regret.copy(resonateCount = regret.resonateCount + 1),
@@ -86,11 +92,15 @@ class HomeViewModel(
     }
 
     companion object {
-        fun factory(regretRepository: RegretRepository, todoRepository: TodoRepository): ViewModelProvider.Factory {
+        fun factory(
+            regretRepository: RegretRepository,
+            todoRepository: TodoRepository,
+            resonateStore: ResonateStore
+        ): ViewModelProvider.Factory {
             return object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                    return HomeViewModel(regretRepository, todoRepository) as T
+                    return HomeViewModel(regretRepository, todoRepository, resonateStore) as T
                 }
             }
         }
